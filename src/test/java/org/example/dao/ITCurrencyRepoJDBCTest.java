@@ -2,6 +2,7 @@ package org.example.dao;
 
 import org.example.model.Currency;
 import org.example.model.ExchangeRate;
+import org.example.service.DBService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,15 +34,7 @@ class ITCurrencyRepoJDBCTest {
 
     @BeforeAll
     static void beforeAll() {
-        try {
-            Class.forName("org.sqlite.JDBC");
-            String url = "jdbc:sqlite:" + "C:\\Java\\Workspace\\java_backend_learning_course\\currency_exchanger\\src\\test\\resources\\db\\CurrencyExchange.db";
-            connection = DriverManager.getConnection(url);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        connection = DBService.getConnection();
 
     }
 

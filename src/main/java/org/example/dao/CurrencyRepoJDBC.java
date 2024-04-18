@@ -21,7 +21,8 @@ public class CurrencyRepoJDBC implements CurrencyRepository {
     @Override
     public List<Currency> findAll() throws SQLException {
         String sql = "SELECT * FROM currencies;";
-        return es.executeQuery(connection, sql, res -> {
+        List<Object> params = null;
+        return es.executeQuery(connection, sql,params, res -> {
             List<Currency> resultList = new ArrayList<>();
             while (res.next()) {
                 int id = res.getInt("id");
@@ -52,8 +53,9 @@ public class CurrencyRepoJDBC implements CurrencyRepository {
 
     @Override
     public Currency findByCode(String code) throws SQLException {
-        String sql = String.format("SELECT * FROM currencies where code = '%s';", code);
-        return es.executeQuery(connection, sql, res -> {
+        String sql = "SELECT * FROM currencies where code = ?;";
+        List<Object> params = List.of(code);
+        return es.executeQuery(connection, sql,params, res -> {
             if(res.next()){
                 int id = res.getInt("id");
                 String fullName = res.getString("full_name");
@@ -67,13 +69,12 @@ public class CurrencyRepoJDBC implements CurrencyRepository {
 
     @Override
     public int save(Currency currency) throws SQLException {
-        String sql = String.format("INSERT INTO currencies(code, full_name, sign)" +
-                "VALUES ('%s','%s','%s')"
-                ,currency.getCode(),currency.getFullName(),currency.getSign());
+        String sql = "INSERT INTO currencies(code, full_name, sign)" +
+                "VALUES (?,?,?)";
 
-
+        List<Object> params = List.of(currency.getCode(),currency.getFullName(),currency.getSign());
         try {
-            return es.executeUpdate(connection,sql);
+            return es.executeUpdate(connection,sql,params);
         } catch (SQLException e) {
             String notUniqueMessage = "not unique";
             if (e.getMessage().contains(notUniqueMessage)) throw new DataIntegrityException(e.getMessage(), e.getSQLState(), e.getErrorCode());
@@ -84,18 +85,19 @@ public class CurrencyRepoJDBC implements CurrencyRepository {
 
     @Override
     public int deleteById(int id)throws SQLException {
-        String sql = String.format("delete from currencies where id = '%s'", id);
-        return es.executeUpdate(connection, sql);
+        String sql = "delete from currencies where id = ?";
+        List<Object> params = List.of(id);
+        return es.executeUpdate(connection, sql,params);
     }
 
     @Override
     public int update(Currency el) throws SQLException {
-        String sql = String.format("update currencies " +
-                        "set code = '%s', " +
-                        "full_name = '%s', " +
-                        "sign = '%s' " +
-                        "where id = '%s'"
-                ,el.getCode(),el.getFullName(),el.getSign(),el.getId());
-        return es.executeUpdate(connection, sql);
+        String sql = "update currencies " +
+                        "set code = ?, " +
+                        "full_name = ?, " +
+                        "sign = ? " +
+                        "where id = ?";
+        List<Object> params = List.of(el.getCode(),el.getFullName(),el.getSign(),el.getId());
+        return es.executeUpdate(connection, sql,params);
     }
 }

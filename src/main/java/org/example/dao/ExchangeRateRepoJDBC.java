@@ -30,7 +30,9 @@ public class ExchangeRateRepoJDBC implements ExchangerRateRepository{
                 "join currencies as c1 on (er.base_currency_id = c1.id)\n" +
                 "join currencies as c2 on (er.target_currency_id = c2.id);";
 
-        return es.executeQuery(connection, sql, resultSet -> {
+        List<Object> params = null;
+
+        return es.executeQuery(connection, sql,params, resultSet -> {
             List<ExchangeRate> resultList = new ArrayList<>();
             while (resultSet.next()) {
                 int baseCurrencyId = resultSet.getInt("c1_id");
@@ -59,11 +61,12 @@ public class ExchangeRateRepoJDBC implements ExchangerRateRepository{
 
     @Override
     public int save(ExchangeRate element)throws SQLException {
-        String sql = String.format("Insert into exchange_rates(base_currency_id,target_currency_id,rate)" +
-                        "values ('%s','%s','%s')"
-                        ,element.getBaseCurrency().getId(), element.getTargetCurrency().getId(), element.getRate());
+        String sql = "Insert into exchange_rates(base_currency_id,target_currency_id,rate)" +
+                        "values (?,?,?)";
+        List<Object> params = List.of(element.getBaseCurrency().getId(), element.getTargetCurrency().getId(), element.getRate());
+
         try {
-            return es.executeUpdate(connection,sql);
+            return es.executeUpdate(connection,sql,params);
         } catch (SQLException e) {
             String notUniqueMessage = "not unique";
             if (e.getMessage().contains(notUniqueMessage)) throw new DataIntegrityException(e.getMessage(), e.getSQLState(), e.getErrorCode());
@@ -73,24 +76,26 @@ public class ExchangeRateRepoJDBC implements ExchangerRateRepository{
 
     @Override
     public int update(ExchangeRate el) throws SQLException {
-        String sql = String.format("update exchange_rates " +
-                        "set rate = '%s', " +
-                        "base_currency_id = '%s', " +
-                        "target_currency_id = '%s' " +
-                        "where id = '%s'"
-                        ,el.getRate(), el.getBaseCurrency().getId(), el.getTargetCurrency().getId(),el.getId());
-        return es.executeUpdate(connection, sql);
+        String sql = "update exchange_rates " +
+                        "set rate = ?, " +
+                        "base_currency_id = ?, " +
+                        "target_currency_id = ? " +
+                        "where id = ?";
+
+        List<Object> params = List.of(el.getRate(), el.getBaseCurrency().getId(), el.getTargetCurrency().getId(),el.getId());
+        return es.executeUpdate(connection, sql,params);
     }
 
     @Override
     public int deleteById(int id) throws SQLException {
-        String sql = String.format("delete from exchange_rates where id = '%s'", id);
-        return es.executeUpdate(connection, sql);
+        String sql = "delete from exchange_rates where id = ?";
+        List<Object> params = List.of(id);
+        return es.executeUpdate(connection, sql,params);
     }
 
     @Override
     public ExchangeRate findByCodes(String baseCode, String targetCode) throws SQLException {
-        String sql =String.format("select er.id        as er_id\n" +
+        String sql ="select er.id        as er_id\n" +
                 "     , c1.id        as c1_id\n" +
                 "     , c2.id        as c2_id\n" +
                 "     , er.rate      as er_rate\n" +
@@ -103,11 +108,13 @@ public class ExchangeRateRepoJDBC implements ExchangerRateRepository{
                 "from exchange_rates as er\n" +
                 "         join currencies as c1 on (er.base_currency_id = c1.id)\n" +
                 "         join currencies as c2 on (er.target_currency_id = c2.id)\n" +
-                "where c1.code = '%s'\n" +
-                "  and c2.code = '%s';",baseCode,targetCode);
-//        List<Object> params = List.of(baseCode,targetCode);
+                "where c1.code = ?\n" +
+                "  and c2.code = ?;";
+       List<Object> params = List.of(baseCode,targetCode);
 
-        return es.executeQuery(connection,sql, resultSet -> {
+
+
+        return es.executeQuery(connection,sql,params, resultSet -> {
 
             if (resultSet.next()){
                 int baseCurrencyId = resultSet.getInt("c1_id");
