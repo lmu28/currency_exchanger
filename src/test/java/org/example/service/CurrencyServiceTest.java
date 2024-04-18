@@ -1,7 +1,7 @@
 package org.example.service;
 
 import org.example.controller.HttpStatus;
-import org.example.controller.dto.ResponseEntity;
+import org.example.service.dto.ResponseEntity;
 import org.example.dao.CurrencyRepository;
 import org.example.dao.exception.DataIntegrityException;
 import org.example.model.Currency;
@@ -9,14 +9,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class CurrencyServiceTest {

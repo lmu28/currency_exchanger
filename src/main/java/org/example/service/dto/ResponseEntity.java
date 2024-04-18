@@ -1,4 +1,4 @@
-package org.example.controller.dto;
+package org.example.service.dto;
 
 import org.example.controller.HttpStatus;
 

@@ -1,8 +1,7 @@
 package org.example.service;
 
 import org.example.controller.HttpStatus;
-import org.example.controller.dto.ResponseEntity;
-import org.example.dao.CurrencyRepoJDBC;
+import org.example.service.dto.ResponseEntity;
 import org.example.dao.CurrencyRepository;
 import org.example.dao.exception.DataIntegrityException;
 import org.example.model.Currency;
@@ -11,8 +10,8 @@ import java.sql.SQLException;
 import java.util.List;
 
 public class CurrencyService {
-    public static final String SERVER_ERROR = "База данных недоступна";
-    public static final String OK_MESSAGE = "Ок";
+    public static final String SERVER_ERROR_MESSAGE = "База данных недоступна";
+    public static final String OK_MESSAGE = "Успех";
     private final CurrencyRepository repository;
 
     public CurrencyService(CurrencyRepository cr) {
@@ -27,7 +26,7 @@ public class CurrencyService {
             return ResponseEntity.<List<Currency>>builder().code(HttpStatus.OK).message(OK_MESSAGE).body(currencies).build();
         } catch (SQLException e) {
             System.out.println(e.getMessage());
-            return ResponseEntity.<List<Currency>>builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR).build();
+            return ResponseEntity.<List<Currency>>builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR_MESSAGE).build();
         }
 
 
@@ -45,7 +44,7 @@ public class CurrencyService {
         }
         catch (SQLException e) {
             System.out.println(e.getMessage());
-            return ResponseEntity.builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR).build();
+            return ResponseEntity.builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR_MESSAGE).build();
         }
     }
 
@@ -60,7 +59,7 @@ public class CurrencyService {
             return ResponseEntity.<Currency>builder().code(HttpStatus.OK).message(OK_MESSAGE).body(currency).build();
         } catch (SQLException e) {
             System.out.println(e.getMessage());
-            return ResponseEntity.<Currency>builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR).build();
+            return ResponseEntity.<Currency>builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR_MESSAGE).build();
         }
     }
 }
