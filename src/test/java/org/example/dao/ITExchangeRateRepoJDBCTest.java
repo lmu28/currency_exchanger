@@ -17,12 +17,8 @@ import static org.assertj.core.api.Assertions.*;
 class ITExchangeRateRepoJDBCTest {
 
 
-
-    public static final int ROWS_COUNT = 4;
+    public static final int ROWS_COUNT = 5;
     public static final int FIRST_ELEMENT_INDEX = 0;
-
-
-    private DBService dbService;
     private static Connection connection;
 
     private ExchangerRateRepository repo;
@@ -30,8 +26,6 @@ class ITExchangeRateRepoJDBCTest {
     private ExchangeRate exchangeRate;
     private Currency base;
     private Currency target;
-
-
 
 
     @BeforeAll
@@ -48,18 +42,18 @@ class ITExchangeRateRepoJDBCTest {
         exchangeRate = new ExchangeRate(0, base, target, 1.12);
     }
 
-    @AfterAll
-    static void afterAll() {
-        try {
-            connection.close();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
+//    @AfterAll
+//    static void afterAll() {
+//        try {
+//            connection.close();
+//        } catch (SQLException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
 
 
     @Test
-    void findAll_ReturnList() throws SQLException  {
+    void findAll_ReturnList() throws SQLException {
 
         List<ExchangeRate> actual = repo.findAll();
 
@@ -106,20 +100,13 @@ class ITExchangeRateRepoJDBCTest {
     }
 
 
-
-
-
-
-
-
-
     @Test
     void update_ElementExists_UpdateElement() throws SQLException {
         connection.setAutoCommit(false);
         ExchangeRate sourceElement = repo.findAll().get(FIRST_ELEMENT_INDEX);
         double rateBefore = sourceElement.getRate();
         int rateDif = 20;
-        sourceElement.setRate(rateBefore- rateDif);
+        sourceElement.setRate(rateBefore - rateDif);
         int res = repo.update(sourceElement);
 
         int expectedUpdatedRows = 1;
@@ -128,7 +115,7 @@ class ITExchangeRateRepoJDBCTest {
         ExchangeRate updatedElement = repo.findAll().get(FIRST_ELEMENT_INDEX);
         assertThat(updatedElement)
                 //difference
-                .matches(el -> el.getRate() == rateBefore-rateDif)
+                .matches(el -> el.getRate() == rateBefore - rateDif)
                 // no changes
                 .matches(el -> el.getId() == sourceElement.getId())
                 .matches(el -> el.getBaseCurrency().getId() == sourceElement.getBaseCurrency().getId())
@@ -162,7 +149,7 @@ class ITExchangeRateRepoJDBCTest {
         int res = repo.deleteById(deletedEl.getId());
         int expectedUpdatedRows = 1;
         assertThat(res).matches(r -> r == expectedUpdatedRows);
-        assertThat(repo.findAll().size()).isEqualTo(ROWS_COUNT-1);
+        assertThat(repo.findAll().size()).isEqualTo(ROWS_COUNT - 1);
         assertThat(repo.findAll()).allMatch(el -> el.getId() != deletedEl.getId());
         connection.rollback();
     }
@@ -178,14 +165,14 @@ class ITExchangeRateRepoJDBCTest {
     }
 
     @Test
-     void findByCodes_CodesExists_ReturnsElement() throws SQLException {
+    void findByCodes_CodesExists_ReturnsElement() throws SQLException {
         connection.setAutoCommit(false);
         List<ExchangeRate> elements = repo.findAll();
         ExchangeRate exchangeRate = elements.get(FIRST_ELEMENT_INDEX);
         String code1 = exchangeRate.getBaseCurrency().getCode();
         String code2 = exchangeRate.getTargetCurrency().getCode();
 
-        assertThat(repo.findByCodes(code1,code2))
+        assertThat(repo.findByCodes(code1, code2))
                 .matches(el -> el.getRate() == exchangeRate.getRate())
                 .matches(el -> el.getBaseCurrency().getId() == exchangeRate.getBaseCurrency().getId())
                 .matches(el -> el.getBaseCurrency().getCode().equals(exchangeRate.getBaseCurrency().getCode()))
@@ -204,10 +191,56 @@ class ITExchangeRateRepoJDBCTest {
         connection.setAutoCommit(false);
         String invalidCode = "1USD";
 
-        assertThat(repo.findByCodes(invalidCode,invalidCode)).isNull();
+        assertThat(repo.findByCodes(invalidCode, invalidCode)).isNull();
 
 
         connection.rollback();
     }
+
+    @Test
+    void findByTargetCodesBasedUSD_BothCodesExists_ReturnsListOfOneElement() throws SQLException {
+        connection.setAutoCommit(false);
+        String base = "USD";
+        String code1 = "RUB";
+        String code2 = "EUR";
+        List<ExchangeRate> exchangeRates = repo.findByTargetCodesBasedUSD(code1, code2);
+        int expectedSize = 2;
+        assertThat(exchangeRates.size()).isEqualTo(expectedSize);
+        assertThat(exchangeRates)
+                .allMatch(el -> el.getBaseCurrency().getCode().equals(base))
+                .allMatch(el -> el.getTargetCurrency().getCode().equals(code1) ||
+                        el.getTargetCurrency().getCode().equals(code2));
+        assertThat(exchangeRates.get(0).getTargetCurrency().getCode()).isNotEqualTo
+                (exchangeRates.get(1).getTargetCurrency().getCode());
+        connection.rollback();
+    }
+
+    @Test
+    void findByTargetCodesBasedUSD_OneCodeExists_ReturnsListOfOneElement() throws SQLException {
+        connection.setAutoCommit(false);
+        String base = "USD";
+        String code1 = "RUB";
+        String code2 = "2RUB2";
+        List<ExchangeRate> exchangeRates = repo.findByTargetCodesBasedUSD(code1, code2);
+        int expectedSize = 1;
+        assertThat(exchangeRates.size()).isEqualTo(expectedSize);
+        assertThat(exchangeRates)
+                .allMatch(el -> el.getBaseCurrency().getCode().equals(base))
+                .allMatch(el -> el.getTargetCurrency().getCode().equals(code1));
+        connection.rollback();
+
+
+    }
+
+    @Test
+    void findByTargetCodesBasedUSD_NoCodesExists_ReturnsEmptyList() throws SQLException {
+        connection.setAutoCommit(false);
+        String code1 = "1RUB1";
+        String code2 = "2RUB2";
+        List<ExchangeRate> exchangeRates = repo.findByTargetCodesBasedUSD(code1, code2);
+        assertThat(exchangeRates).isEmpty();
+        connection.rollback();
+    }
+
 
 }

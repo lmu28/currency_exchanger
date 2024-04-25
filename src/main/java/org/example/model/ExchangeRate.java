@@ -11,6 +11,9 @@ public class ExchangeRate {
     private double rate;
 
 
+    public ExchangeRate() {
+    }
+
     public ExchangeRate(int id, Currency baseCurrency, Currency targetCurrency, double rate) {
         this.id = id;
         this.baseCurrency = baseCurrency;

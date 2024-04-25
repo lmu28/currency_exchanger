@@ -38,14 +38,14 @@ class ITCurrencyRepoJDBCTest {
 
     }
 
-    @AfterAll
-    static void afterAll() {
-        try {
-            connection.close();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
+//    @AfterAll
+//    static void afterAll() {
+//        try {
+//            connection.close();
+//        } catch (SQLException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
 
 
     @Test

@@ -1,24 +1,24 @@
-package org.example.service.dto;
+package org.example.controller.dto;
 
 import org.example.controller.HttpStatus;
 
-public class ResponseEntity<T> {
+public class ResponseDTO<T> {
 
     private HttpStatus code;
     private String message;
 
     private T body;
 
-    public ResponseEntity(HttpStatus code, String message, T body) {
+    public ResponseDTO(HttpStatus code, String message, T body) {
         this.code = code;
         this.message = message;
         this.body = body;
     }
 
-    public ResponseEntity() {
+    public ResponseDTO() {
     }
 
-    public ResponseEntity(HttpStatus code, String message) {
+    public ResponseDTO(HttpStatus code, String message) {
         this.code = code;
         this.message = message;
     }
@@ -54,7 +54,7 @@ public class ResponseEntity<T> {
 
 
     public static class Builder<T>{
-        ResponseEntity<T> re = new ResponseEntity<>();
+        ResponseDTO<T> re = new ResponseDTO<>();
 
         public Builder<T> body(T body){
             re.setBody(body);
@@ -70,7 +70,7 @@ public class ResponseEntity<T> {
             return this;
         }
 
-        public ResponseEntity<T> build(){
+        public ResponseDTO<T> build(){
             return re;
         }
 

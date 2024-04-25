@@ -1,4 +1,4 @@
-package org.example.service.dto;
+package org.example.controller.dto;
 
 import org.example.model.Currency;
 

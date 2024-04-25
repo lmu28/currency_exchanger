@@ -6,6 +6,7 @@ import org.example.model.Currency;
 import org.example.model.ExchangeRate;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,26 +36,9 @@ public class ExchangeRateRepoJDBC implements ExchangerRateRepository{
         return es.executeQuery(connection, sql,params, resultSet -> {
             List<ExchangeRate> resultList = new ArrayList<>();
             while (resultSet.next()) {
-                int baseCurrencyId = resultSet.getInt("c1_id");
-                String baseCurrencyCode = resultSet.getString("c1_code");
-                String baseCurrencyName = resultSet.getString("c1_full_name");
-                String baseCurrencySign = resultSet.getString("c1_sign");
-                Currency baseCurrency = new Currency(baseCurrencyId,baseCurrencyCode,baseCurrencyName,baseCurrencySign);
-
-                int targetCurrencyId = resultSet.getInt("c2_id");
-                String targetCurrencyCode = resultSet.getString("c2_code");
-                String targetCurrencyName = resultSet.getString("c2_full_name");
-                String targetCurrencySign = resultSet.getString("c2_sign");
-                Currency targetCurrency = new Currency(targetCurrencyId,targetCurrencyCode,targetCurrencyName,targetCurrencySign);
-
-                int id = resultSet.getInt("er_id");
-                double rate = resultSet.getDouble("er_rate");
-
-                resultList.add(new ExchangeRate(id, baseCurrency, targetCurrency, rate));
+                resultList.add(buildExchangeRate(resultSet));
             }
             return resultList;
-
-
         });
     }
 
@@ -112,33 +96,63 @@ public class ExchangeRateRepoJDBC implements ExchangerRateRepository{
                 "  and c2.code = ?;";
        List<Object> params = List.of(baseCode,targetCode);
 
-
-
         return es.executeQuery(connection,sql,params, resultSet -> {
 
-            if (resultSet.next()){
-                int baseCurrencyId = resultSet.getInt("c1_id");
-                String baseCurrencyCode = resultSet.getString("c1_code");
-                String baseCurrencyName = resultSet.getString("c1_full_name");
-                String baseCurrencySign = resultSet.getString("c1_sign");
-                Currency baseCurrency = new Currency(baseCurrencyId,baseCurrencyCode,baseCurrencyName,baseCurrencySign);
-
-                int targetCurrencyId = resultSet.getInt("c2_id");
-                String targetCurrencyCode = resultSet.getString("c2_code");
-                String targetCurrencyName = resultSet.getString("c2_full_name");
-                String targetCurrencySign = resultSet.getString("c2_sign");
-                Currency targetCurrency = new Currency(targetCurrencyId,targetCurrencyCode,targetCurrencyName,targetCurrencySign);
-
-                int id = resultSet.getInt("er_id");
-                double rate = resultSet.getDouble("er_rate");
-
-                return new ExchangeRate(id,baseCurrency,targetCurrency,rate);
-
-
-            }
+            if (resultSet.next()) return buildExchangeRate(resultSet);
             return null;
-
         });
+
+    }
+
+
+    @Override
+    public List<ExchangeRate> findByTargetCodesBasedUSD(String code1, String code2) throws SQLException {
+        String query = "select er.id        as er_id\n" +
+                "     , c1.id        as c1_id\n" +
+                "     , c2.id        as c2_id\n" +
+                "     , er.rate      as er_rate\n" +
+                "     , c1.code      as c1_code\n" +
+                "     , c1.full_name as c1_full_name\n" +
+                "     , c1.sign      as c1_sign\n" +
+                "     , c2.code      as c2_code\n" +
+                "     , c2.full_name as c2_full_name\n" +
+                "     , c2.sign      as c2_sign\n" +
+                "from exchange_rates as er\n" +
+                "         join currencies c1 on (c1.id = er.base_currency_id)\n" +
+                "         join currencies c2 on (c2.id = er.target_currency_id)\n" +
+                "where c1.code = 'USD'\n" +
+                "  and (c2.code == ? or c2.code == ?)";
+
+
+        List<Object> params = List.of(code1,code2);
+        return es.executeQuery(connection, query,params, resultSet -> {
+            List<ExchangeRate> resultList = new ArrayList<>();
+            while (resultSet.next()) {
+                resultList.add(buildExchangeRate(resultSet));
+            }
+            return resultList;
+        });
+    }
+
+
+    private ExchangeRate buildExchangeRate(ResultSet resultSet) throws SQLException {
+
+        int baseCurrencyId = resultSet.getInt("c1_id");
+        String baseCurrencyCode = resultSet.getString("c1_code");
+        String baseCurrencyName = resultSet.getString("c1_full_name");
+        String baseCurrencySign = resultSet.getString("c1_sign");
+        Currency baseCurrency = new Currency(baseCurrencyId, baseCurrencyCode, baseCurrencyName, baseCurrencySign);
+
+        int targetCurrencyId = resultSet.getInt("c2_id");
+        String targetCurrencyCode = resultSet.getString("c2_code");
+        String targetCurrencyName = resultSet.getString("c2_full_name");
+        String targetCurrencySign = resultSet.getString("c2_sign");
+        Currency targetCurrency = new Currency(targetCurrencyId, targetCurrencyCode, targetCurrencyName, targetCurrencySign);
+
+        int id = resultSet.getInt("er_id");
+        double rate = resultSet.getDouble("er_rate");
+        return new ExchangeRate(id,baseCurrency,targetCurrency,rate);
+
 
     }
 }

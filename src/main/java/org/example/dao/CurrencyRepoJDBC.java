@@ -5,6 +5,7 @@ import org.example.dao.executor.ExecutorService;
 import org.example.model.Currency;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,44 +25,19 @@ public class CurrencyRepoJDBC implements CurrencyRepository {
         List<Object> params = null;
         return es.executeQuery(connection, sql,params, res -> {
             List<Currency> resultList = new ArrayList<>();
-            while (res.next()) {
-                int id = res.getInt("id");
-                String code = res.getString("code");
-                String fullName = res.getString("full_name");
-                String sign = res.getString("sign");
-                resultList.add(new Currency(id, code, fullName, sign));
-            }
+            while (res.next()) resultList.add(buildCurrency(res));
             return resultList;
         });
 
     }
 
-//    @Override
-//    public Currency findById(int id) {
-//        String sql = String.format("SELECT * FROM currencies where id = %s;", id);
-//        return es.executeQuery(connection, sql, res -> {
-//            if (res.next()){
-//                String code = res.getString("code");
-//                String fullName = res.getString("full_name");
-//                String sign = res.getString("sign");
-//                return new Currency(id, code, fullName, sign);
-//            }
-//            return null;
-//
-//        });
-//    }
 
     @Override
     public Currency findByCode(String code) throws SQLException {
         String sql = "SELECT * FROM currencies where code = ?;";
         List<Object> params = List.of(code);
         return es.executeQuery(connection, sql,params, res -> {
-            if(res.next()){
-                int id = res.getInt("id");
-                String fullName = res.getString("full_name");
-                String sign = res.getString("sign");
-                return new Currency(id, code, fullName, sign);
-            }
+            if(res.next()) return buildCurrency(res);
             return null;
 
         });
@@ -99,5 +75,15 @@ public class CurrencyRepoJDBC implements CurrencyRepository {
                         "where id = ?";
         List<Object> params = List.of(el.getCode(),el.getFullName(),el.getSign(),el.getId());
         return es.executeUpdate(connection, sql,params);
+    }
+
+    private Currency buildCurrency(ResultSet resultSet) throws SQLException {
+        int id = resultSet.getInt("id");
+        String fullName = resultSet.getString("full_name");
+        String sign = resultSet.getString("sign");
+        String code = resultSet.getString("code");
+        return new Currency(id, code, fullName, sign);
+
+
     }
 }

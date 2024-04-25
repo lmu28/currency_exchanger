@@ -2,110 +2,171 @@ package org.example.service;
 
 import org.example.controller.HttpStatus;
 import org.example.model.Currency;
-import org.example.service.dto.ExchangeDTO;
-import org.example.service.dto.ResponseEntity;
+import org.example.controller.dto.ExchangeDTO;
+import org.example.controller.dto.ResponseDTO;
 import org.example.dao.ExchangerRateRepository;
 import org.example.dao.exception.DataIntegrityException;
 import org.example.model.ExchangeRate;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Set;
 
 public class ExchangeRatesService {
-    public static final String SERVER_ERROR_MESSAGE = "База данных недоступна";
-    public static final String OK_MESSAGE = "Успех";
+    public static final String SERVER_ERROR_MESSAGE = "Data base is unavailable";
+    public static final String OK_MESSAGE = "Success";
     private final ExchangerRateRepository repository;
 
     public ExchangeRatesService(ExchangerRateRepository repository) {
         this.repository = repository;
     }
 
-    public ResponseEntity<List<ExchangeRate>> findAll() {
+    public ResponseDTO<List<ExchangeRate>> findAll() {
         try {
             List<ExchangeRate> exchangeRates = repository.findAll();
-            return ResponseEntity.<List<ExchangeRate>>builder().code(HttpStatus.OK).message(OK_MESSAGE).body(exchangeRates).build();
+            return ResponseDTO.<List<ExchangeRate>>builder().code(HttpStatus.OK).message(OK_MESSAGE).body(exchangeRates).build();
         } catch (SQLException e) {
             System.out.println(e.getMessage());
-            return ResponseEntity.<List<ExchangeRate>>builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR_MESSAGE).build();
+            return ResponseDTO.<List<ExchangeRate>>builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR_MESSAGE).build();
         }
 
 
     }
 
-    public ResponseEntity<ExchangeRate> findByCodes(String baseCode, String targetCode) {
+    public ResponseDTO<ExchangeRate> findByCodes(String baseCode, String targetCode) {
         try {
-            ExchangeRate currency =  repository.findByCodes(baseCode,targetCode);
-            if (currency == null){
-                String message = "Обменный курс для пары не найден";
-                return ResponseEntity.<ExchangeRate>builder().code(HttpStatus.NOT_FOUND).message(message).build();
+            ExchangeRate currency = repository.findByCodes(baseCode.toUpperCase(), targetCode.toUpperCase());
+            if (currency == null) {
+                String message = "The exchange rate for the pair was not found";
+                return ResponseDTO.<ExchangeRate>builder().code(HttpStatus.NOT_FOUND).message(message).build();
             }
-            return ResponseEntity.<ExchangeRate>builder().code(HttpStatus.OK).message(OK_MESSAGE).body(currency).build();
+            return ResponseDTO.<ExchangeRate>builder().code(HttpStatus.OK).message(OK_MESSAGE).body(currency).build();
         } catch (SQLException e) {
             System.out.println(e.getMessage());
-            return ResponseEntity.<ExchangeRate>builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR_MESSAGE).build();
+            return ResponseDTO.<ExchangeRate>builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR_MESSAGE).build();
         }
     }
-    
-    public ResponseEntity save(ExchangeRate el) {
+
+    public ResponseDTO save(ExchangeRate el) {
         try {
             repository.save(el);
-            return ResponseEntity.builder().code(HttpStatus.CREATED).message(OK_MESSAGE).build();
-        }
-        catch (DataIntegrityException e){
+            return ResponseDTO.builder().code(HttpStatus.CREATED).message(OK_MESSAGE).build();
+        } catch (DataIntegrityException e) {
             System.out.println(e.getMessage());
-            String message = "Валютная пара с таким кодом уже существует";
-            return ResponseEntity.builder().code(HttpStatus.CONFLICT).message(message).build();
-        }
-        catch (SQLException e) {
+            String message = "Currency pair with such codes is already exists";
+            return ResponseDTO.builder().code(HttpStatus.CONFLICT).message(message).build();
+        } catch (SQLException e) {
             System.out.println(e.getMessage());
-            return ResponseEntity.builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR_MESSAGE).build();
+            return ResponseDTO.builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR_MESSAGE).build();
         }
     }
 
 
-    public ResponseEntity update(ExchangeRate el) {
+    public ResponseDTO update(ExchangeRate el) {
         try {
             int result = repository.update(el);
-            if (result > 0){
-                return ResponseEntity.builder().code(HttpStatus.OK).message(OK_MESSAGE).build();
-            }else {
-                String message = "Валютная пара отсутствует в базе данных";
-                return ResponseEntity.<ExchangeRate>builder().code(HttpStatus.NOT_FOUND).message(message).build();
+            if (result > 0) {
+                return ResponseDTO.builder().code(HttpStatus.OK).message(OK_MESSAGE).build();
+            } else {
+                String message = "The currency pair is missing from the database";
+                return ResponseDTO.<ExchangeRate>builder().code(HttpStatus.NOT_FOUND).message(message).build();
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
-            return ResponseEntity.builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR_MESSAGE).build();
+            return ResponseDTO.builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR_MESSAGE).build();
         }
     }
 
-    public ResponseEntity<ExchangeDTO> exchange(String baseCode, String targetCode, double amount){
+    public ResponseDTO<ExchangeDTO> exchange(String baseCode, String targetCode, double amount)  {
+        ResponseDTO<ExchangeDTO> answer = null;
 
-        ResponseEntity<ExchangeRate> exchangeRateEntity = findByCodes(baseCode,targetCode);
+        ResponseDTO<ExchangeRate> rateEntity = findByCodes(baseCode, targetCode);
+        answer = handleResponseDTO(Set.of(HttpStatus.SERVER_ERROR,HttpStatus.OK),rateEntity, amount);
+        if (answer != null ) return answer;
 
-        // TODO: maybe handle high-level cases like it's in findByCodes
-        HttpStatus excCode = exchangeRateEntity.getCode();
-        String message = exchangeRateEntity.getMessage();
-        if (excCode.equals(HttpStatus.SERVER_ERROR) ||
-        excCode.equals(HttpStatus.NOT_FOUND)){
-
-            return ResponseEntity.<ExchangeDTO>builder()
-                    .code(excCode)
-                    .message(message)
-                    .body(null)
-                    .build();
+        ResponseDTO<ExchangeRate> reversedRateEntity = findByCodes(targetCode, baseCode);
+        answer = handleResponseDTO(Set.of(HttpStatus.SERVER_ERROR,HttpStatus.OK),reversedRateEntity, amount);
+        if (answer != null ) {
+            ExchangeDTO body = answer.getBody();
+            if (body != null) reverseExchangeRate(body);
+            return answer;
         }
-        ExchangeRate exchangeRate = exchangeRateEntity.getBody();
+
+        try {
+            List<ExchangeRate> ratesBasedUSD = repository.findByTargetCodesBasedUSD(baseCode.toUpperCase(),targetCode.toUpperCase());
+            if (ratesBasedUSD.size() != 2){
+                String message = "The currency pair is missing from the database";
+                return ResponseDTO.<ExchangeDTO>builder().code(HttpStatus.NOT_FOUND).message(message).build();
+            } else {
+                ExchangeRate exchangeRate = buildExchangeRate(ratesBasedUSD, baseCode.toUpperCase());
+                answer = handleResponseDTO(
+                        Set.of(HttpStatus.OK),
+                        ResponseDTO.<ExchangeRate>builder().code(HttpStatus.OK).message(OK_MESSAGE).body(exchangeRate).build(),
+                        amount);
+            }
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return ResponseDTO.<ExchangeDTO>builder().code(HttpStatus.SERVER_ERROR).message(SERVER_ERROR_MESSAGE).build();
+        }
+        return answer;
+        // usd rub
+        // usd eur
+
+        // 95r  -- 0.95e
+        // 100r  -- 1e
+        // 1000r -- 10e  (eur rub amount=10)
 
 
-        Currency base = exchangeRate.getBaseCurrency();
-        Currency target = exchangeRate.getTargetCurrency();
-        double rate = exchangeRate.getRate();
-        double convertedAmount = rate * amount;
-        return ResponseEntity.<ExchangeDTO>builder()
-                .code(excCode)
-                .message(message)
-                .body( new ExchangeDTO(base,target,rate,amount,convertedAmount))
-                .build();
+    }
+
+    private ExchangeRate buildExchangeRate(List<ExchangeRate> ratesBasedUSD, String baseCode) {
+        ExchangeRate based = ratesBasedUSD.get(0);
+        ExchangeRate target = ratesBasedUSD.get(1);
+        if (!based.getTargetCurrency().getCode().equals(baseCode)){
+            ExchangeRate tmp = based;
+            based = target;
+            target = tmp;
+        }
+        double rate = based.getRate()/ target.getRate();
+
+        return new ExchangeRate(0, based.getTargetCurrency(), target.getTargetCurrency(),rate);
+
+    }
+
+    private void reverseExchangeRate(ExchangeDTO body) {
+        double rate = body.getRate();
+        Currency base = body.getBaseCurrency();
+        Currency target = body.getTargetCurrency();
+        double convertedRate = 1/rate;
+        body.setRate(convertedRate);
+        body.setBaseCurrency(target);
+        body.setTargetCurrency(base);
+        body.setConvertedAmount( body.getConvertedAmount() / rate * convertedRate );
+    }
+
+
+    private ResponseDTO<ExchangeDTO> handleResponseDTO(Set<HttpStatus> statuses, ResponseDTO<ExchangeRate> re, double amount) {
+        HttpStatus status = re.getCode();
+        if (statuses.contains(status)){
+            ExchangeRate exchangeRate = re.getBody();
+            ExchangeDTO exchangeDTO = null;
+            if (exchangeRate != null) {
+                Currency base = exchangeRate.getBaseCurrency();
+                Currency target = exchangeRate.getTargetCurrency();
+                double rate = exchangeRate.getRate();
+                double convertedAmount = rate * amount;
+                exchangeDTO = new ExchangeDTO(base, target, rate, amount, convertedAmount);
+            }
+            return ResponseDTO.<ExchangeDTO>builder()
+                    .code(status)
+                    .message(re.getMessage())
+                    .body(exchangeDTO)
+                    .build();
+
+        }
+        return null;
+
     }
 
 
